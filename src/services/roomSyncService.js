@@ -8,8 +8,7 @@ class RoomSyncService {
 
   connect() {
     if (!this.socket && typeof window !== 'undefined') {
-      const hostname = window.location.hostname || 'localhost';
-      const serverUrl = `http://${hostname}:3001`;
+      const serverUrl = 'https://kelimelik.onrender.com';
       console.log(`🔌 Connecting to Real-Time Socket Server at ${serverUrl}`);
       
       this.socket = io(serverUrl, {
