@@ -19,6 +19,36 @@ export default function PlayerRack({
 }) {
   const [dragOverIdx, setDragOverIdx] = useState(null);
   const [draggingRackIdx, setDraggingRackIdx] = useState(null);
+  const [exchangeMode, setExchangeMode] = useState(false);
+const [exchangeSelection, setExchangeSelection] = useState(new Set());
+
+const toggleExchangeTile = (tile) => {
+  setExchangeSelection(prev => {
+    const next = new Set(prev);
+    if (next.has(tile.id)) {
+      next.delete(tile.id);
+    } else {
+      next.add(tile.id);
+    }
+    return next;
+  });
+};
+
+const cancelExchange = () => {
+  setExchangeMode(false);
+  setExchangeSelection(new Set());
+};
+
+const confirmExchange = () => {
+  if (exchangeSelection.size === 0) return;
+
+  if (onExchangeTiles) {
+    onExchangeTiles(Array.from(exchangeSelection));
+  }
+
+  setExchangeMode(false);
+  setExchangeSelection(new Set());
+};
 
   const RACK_CAPACITY = 7;
   const displaySlots = Array.from({ length: RACK_CAPACITY }, (_, i) => rackTiles[i] || null);
@@ -111,16 +141,35 @@ export default function PlayerRack({
                 className="scrabble-tile"
                 draggable={true} // Always draggable for rack reorder
                 onDragStart={(e) => handleTileDragStart(e, tile, idx)}
-                onClick={() => {
-                  if (isMyTurn && !isCurrentPlayerBot) {
-                    audioService.playTileDropSound();
-                    onSelectTile(selectedTile?.id === tile.id ? null : tile);
-                  }
-                }}
+		onClick={() => {
+  		if (!isMyTurn || isCurrentPlayerBot) return;
+
+  		audioService.playTileDropSound();
+
+ 		 if (exchangeMode) {
+ 		   toggleExchangeTile(tile);
+  		} else {
+  		  onSelectTile(selectedTile?.id === tile.id ? null : tile);
+ 		 }
+		}}
                 style={{
-                  border: selectedTile?.id === tile.id ? '2px solid var(--accent-gold)' : 'none',
-                  transform: selectedTile?.id === tile.id ? 'translateY(-6px)' : 'none',
-                  boxShadow: selectedTile?.id === tile.id ? '0 8px 16px var(--accent-gold-glow)' : 'var(--tile-shadow)',
+                  border: exchangeMode && exchangeSelection.has(tile.id)
+ 		 ? '2px solid var(--accent-gold)'
+  		: selectedTile?.id === tile.id
+  		  ? '2px solid var(--accent-gold)'
+  		  : 'none',
+                  transform:
+ 		 exchangeMode && exchangeSelection.has(tile.id)
+ 		   ? 'translateY(-8px)'
+  		  : selectedTile?.id === tile.id
+  		    ? 'translateY(-6px)'
+  		    : 'none',
+                  boxShadow:
+ 		 exchangeMode && exchangeSelection.has(tile.id)
+ 		   ? '0 8px 16px var(--accent-gold-glow)'
+   		 : selectedTile?.id === tile.id
+    		  ? '0 8px 16px var(--accent-gold-glow)'
+    		  : 'var(--tile-shadow)',
                   opacity: draggingRackIdx === idx ? 0.4 : isMyTurn ? 1 : 0.8,
                   cursor: 'grab'
                 }}
@@ -161,14 +210,37 @@ export default function PlayerRack({
           <Shuffle size={16} /> Karıştır
         </button>
 
-        <button
-          className="btn btn-warning"
-          onClick={onExchangeTiles}
-          disabled={!isMyTurn || tempPlacedTilesCount > 0 || isCurrentPlayerBot}
-          title="Seçilen veya tüm harfleri kese ile değiştirir"
-        >
-          <ArrowLeftRight size={16} /> Harf Değiştir
-        </button>
+        {!exchangeMode ? (
+  <button
+    className="btn btn-warning"
+    onClick={() => {
+      setExchangeMode(true);
+      setExchangeSelection(new Set());
+    }}
+    disabled={!isMyTurn || tempPlacedTilesCount > 0 || isCurrentPlayerBot}
+    title="Değiştirmek istediğiniz harfleri seçin"
+  >
+    <ArrowLeftRight size={16} /> Harf Değiştir
+  </button>
+) : (
+  <>
+    <button
+      className="btn btn-warning"
+      onClick={confirmExchange}
+      disabled={exchangeSelection.size === 0}
+      title="Seçtiğiniz harfleri değiştir"
+    >
+      <ArrowLeftRight size={16} /> Seçilenleri Değiştir ({exchangeSelection.size})
+    </button>
+
+    <button
+      className="btn btn-secondary"
+      onClick={cancelExchange}
+    >
+      İptal
+    </button>
+  </>
+)}
 
         <button
           className="btn btn-danger"

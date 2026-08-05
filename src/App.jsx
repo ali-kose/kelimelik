@@ -618,7 +618,7 @@ export default function App() {
 
     // Verify all formed words against TDK
     for (const w of formedWords) {
-      const tdkData = await fetchWordMeaning(w.word);
+  const tdkData = await fetchWordMeaning(w.word);
       if (!tdkData.isValid) {
         audioService.playErrorSound();
         handleRecallAll();
@@ -951,33 +951,68 @@ export default function App() {
                   }
                   setPlayerRacks(prev => ({ ...prev, [myPlayerId]: myRack }));
                 }}
-                onExchangeTiles={() => {
-                  if (!isMyTurn || !isGameActive || tempPlacedTiles.length > 0 || tileBag.length === 0) return;
-                  const myRack = playerRacks[myPlayerId] || [];
-                  const returnedCount = myRack.length;
-                  const newBag = [...tileBag, ...myRack];
-                  for (let i = newBag.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [newBag[i], newBag[j]] = [newBag[j], newBag[i]];
-                  }
-                  const newRack = newBag.slice(0, returnedCount);
-                  const updatedBag = newBag.slice(returnedCount);
+                onExchangeTiles={(selectedTileIds) => {
+  if (
+    !isMyTurn ||
+    !isGameActive ||
+    tempPlacedTiles.length > 0 ||
+    tileBag.length === 0 ||
+    !selectedTileIds ||
+    selectedTileIds.length === 0
+  ) return;
 
-                  const nextTurnIdx = (activePlayerIdx + 1) % Math.max(1, players.length);
-                  const systemMsg = {
-                    id: `sys-${Date.now()}`,
-                    sender: activePlayer.name,
-                    text: `🔄 ${activePlayer.name} harflerini değiştirdi.`,
-                    type: 'system'
-                  };
+  const myRack = playerRacks[myPlayerId] || [];
 
-                  roomSyncService.passTurn({
-                    roomCode,
-                    nextTurnIdx,
-                    updatedPlayerRacks: { ...playerRacks, [myPlayerId]: newRack },
-                    systemMsg
-                  });
-                }}
+  // Sadece seçilen taşları bul
+  const selectedTiles = myRack.filter(tile =>
+    selectedTileIds.includes(tile.id)
+  );
+
+  if (selectedTiles.length === 0) return;
+
+  // Seçilmeyen taşlar elde kalır
+  const remainingTiles = myRack.filter(tile =>
+    !selectedTileIds.includes(tile.id)
+  );
+
+  // Torbaya sadece seçilen taşları geri koy
+  const newBag = [...tileBag, ...selectedTiles];
+
+  // Torbayı karıştır
+  for (let i = newBag.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newBag[i], newBag[j]] = [newBag[j], newBag[i]];
+  }
+
+  // Sadece değiştirilen taş sayısı kadar yeni taş çek
+  const returnedCount = selectedTiles.length;
+  const newTiles = newBag.slice(0, returnedCount);
+  const updatedBag = newBag.slice(returnedCount);
+
+  // Güvenlik: el hiçbir zaman 7 taşı geçmesin
+  const newRack = [...remainingTiles, ...newTiles].slice(0, 7);
+
+  const nextTurnIdx =
+    (activePlayerIdx + 1) % Math.max(1, players.length);
+
+  const systemMsg = {
+    id: `sys-${Date.now()}`,
+    sender: activePlayer.name,
+    text: `🔄 ${activePlayer.name} harflerini değiştirdi.`,
+    type: 'system'
+  };
+
+  roomSyncService.passTurn({
+    roomCode,
+    nextTurnIdx,
+    updatedPlayerRacks: {
+      ...playerRacks,
+      [myPlayerId]: newRack
+    },
+    updatedTileBag: updatedBag,
+    systemMsg
+  });
+}}
                 onPassTurn={() => handlePassTurn(false)}
                 isCurrentPlayerBot={false}
                 activePlayerName={

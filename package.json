@@ -35,5 +35,20 @@
   "main": "electron-main.js",
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "build": {
+    "appId": "com.kelimelik.app",
+    "productName": "Kelimelik",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron-main.js",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
 }
