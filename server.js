@@ -99,6 +99,29 @@ app.get('/radio-proxy', (req, res) => {
   console.log(`📻 Proxying radio: ${stationId} → ${targetUrl}`);
   proxyStream(targetUrl, req, res);
 });
+
+// TDK API Proxy - browser CORS sorununu önlemek için
+app.get('/tdk-proxy', async (req, res) => {
+  const word = req.query.word;
+
+  if (!word) {
+    return res.status(400).json({ error: 'Kelime belirtilmedi' });
+  }
+
+  try {
+    const tdkUrl = `https://sozluk.gov.tr/gts?ara=${encodeURIComponent(word)}`;
+
+    const response = await fetch(tdkUrl);
+    const data = await response.json();
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.json(data);
+  } catch (error) {
+    console.error('TDK proxy error:', error.message);
+    res.status(500).json({ error: 'TDK API bağlantısı başarısız' });
+  }
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Active Rooms State Store
