@@ -22,12 +22,9 @@ export async function fetchWordMeaning(rawWord) {
 
   try {
     // Attempt fetching directly from official TDK API (sozluk.gov.tr)
-    const response = await fetch(`https://sozluk.gov.tr/gts?ara=${encodeURIComponent(cleanWordLower)}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
+    const response = await fetch(
+  `https://kelimelik.onrender.com/tdk-proxy?word=${encodeURIComponent(cleanWordLower)}`
+);
 
     if (response.ok) {
       const data = await response.json();
